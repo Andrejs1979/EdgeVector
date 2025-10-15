@@ -6,14 +6,18 @@
 
 import { createYoga } from 'graphql-yoga';
 import { createSchema } from 'graphql-yoga';
-import { typeDefs } from './schema';
+import {
+  typeDefs,
+  vectorQueryExtensions,
+  vectorMutationExtensions,
+} from './schema';
 import { resolvers, type Context } from './resolvers';
 import type { Env } from '../types/env';
 import { authenticateRequest } from '../auth/middleware';
 
 export function createGraphQLServer(env: Env) {
   const schema = createSchema({
-    typeDefs,
+    typeDefs: [typeDefs, vectorQueryExtensions, vectorMutationExtensions],
     resolvers,
   });
 

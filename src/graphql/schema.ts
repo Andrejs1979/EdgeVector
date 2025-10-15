@@ -266,4 +266,153 @@ export const typeDefs = `#graphql
     totalDocuments: Int!
     totalSize: Int!
   }
+
+  # Vector search types
+  type Vector {
+    id: ID!
+    documentId: ID!
+    collection: String!
+    dimensions: Int!
+    model: String
+    normalized: Boolean!
+    metadata: JSON
+    createdAt: DateTime!
+    updatedAt: DateTime!
+  }
+
+  type VectorSearchResult {
+    vector: Vector!
+    document: Document
+    score: Float!
+    distance: Float
+  }
+
+  type VectorSearchResponse {
+    results: [VectorSearchResult!]!
+    stats: VectorSearchStats!
+  }
+
+  type VectorSearchStats {
+    queryTime: Int!
+    vectorsScanned: Int!
+    vectorsFiltered: Int!
+    resultsReturned: Int!
+    cacheHit: Boolean!
+  }
+
+  enum SimilarityMetric {
+    COSINE
+    EUCLIDEAN
+    DOT
+  }
+
+  enum EmbeddingModel {
+    BGE_SMALL
+    BGE_BASE
+    BGE_LARGE
+  }
+
+  input VectorSearchOptions {
+    limit: Int
+    metric: SimilarityMetric
+    collection: String
+    modelName: String
+    threshold: Float
+    includeSelf: Boolean
+    metadataFilter: JSON
+  }
+
+  input AddVectorInput {
+    documentId: ID!
+    vector: [Float!]!
+    modelName: String
+    metadata: JSON
+    normalized: Boolean
+  }
+
+  # Collection statistics for vectors
+  type VectorCollectionStats {
+    totalVectors: Int!
+    dimensions: [Int!]!
+    modelNames: [String!]!
+    avgVectorSize: Float!
+  }
+
+  # Embedding generation result
+  type EmbeddingResult {
+    text: String!
+    embedding: [Float!]!
+    dimensions: Int!
+    model: String!
+    cached: Boolean!
+    processingTime: Int!
+  }
+`;
+
+// Extend existing Query type with vector operations
+export const vectorQueryExtensions = `
+  extend type Query {
+    # Search vectors by similarity
+    vectorSearch(
+      vector: [Float!]!
+      options: VectorSearchOptions
+    ): VectorSearchResponse!
+
+    # Search vectors using text (generates embedding)
+    vectorSearchByText(
+      text: String!
+      embeddingModel: EmbeddingModel
+      options: VectorSearchOptions
+    ): VectorSearchResponse!
+
+    # Get vector for a document
+    getVector(documentId: ID!): Vector
+
+    # Get collection vector statistics
+    vectorCollectionStats(collection: String!): VectorCollectionStats!
+
+    # Compare two texts for similarity
+    compareSimilarity(
+      textA: String!
+      textB: String!
+      embeddingModel: EmbeddingModel
+    ): Float!
+  }
+`;
+
+// Extend existing Mutation type with vector operations
+export const vectorMutationExtensions = `
+  extend type Mutation {
+    # Generate embedding for text
+    generateEmbedding(
+      text: String!
+      embeddingModel: EmbeddingModel
+      normalize: Boolean
+    ): EmbeddingResult!
+
+    # Generate embeddings for multiple texts
+    generateEmbeddingBatch(
+      texts: [String!]!
+      embeddingModel: EmbeddingModel
+    ): [EmbeddingResult!]!
+
+    # Add vector to document
+    addVectorToDocument(
+      input: AddVectorInput!
+    ): Vector!
+
+    # Update vector
+    updateVector(
+      documentId: ID!
+      vector: [Float!]!
+      modelName: String
+      metadata: JSON
+    ): Vector!
+
+    # Delete vector
+    deleteVector(documentId: ID!): Boolean!
+
+    # Delete all vectors in collection
+    deleteVectorCollection(collection: String!): Int!
+  }
 `;
