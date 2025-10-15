@@ -119,7 +119,6 @@ export class EdgeVectorClient {
    */
   async health(): Promise<{
     status: string;
-    service: string;
     version: string;
     environment: string;
     timestamp: string;
@@ -128,14 +127,13 @@ export class EdgeVectorClient {
       query Health {
         health {
           status
-          service
           version
           environment
           timestamp
           database {
             connected
             collections
-            documents
+            totalDocuments
           }
         }
       }
@@ -144,7 +142,6 @@ export class EdgeVectorClient {
     const response = await this.http.request<{
       health: {
         status: string;
-        service: string;
         version: string;
         environment: string;
         timestamp: string;

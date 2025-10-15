@@ -32,8 +32,8 @@ export class AuthClient {
    */
   async register(input: RegisterInput): Promise<AuthResponse> {
     const query = `
-      mutation Register($email: String!, $password: String!, $name: String) {
-        register(email: $email, password: $password, name: $name) {
+      mutation Register($input: RegisterInput!) {
+        register(input: $input) {
           token
           user {
             id
@@ -47,7 +47,7 @@ export class AuthClient {
 
     const response = await this.http.request<{ register: AuthResponse }>(
       query,
-      input
+      { input }
     );
 
     // Store token in client
@@ -72,8 +72,8 @@ export class AuthClient {
    */
   async login(input: LoginInput): Promise<AuthResponse> {
     const query = `
-      mutation Login($email: String!, $password: String!) {
-        login(email: $email, password: $password) {
+      mutation Login($input: LoginInput!) {
+        login(input: $input) {
           token
           user {
             id
@@ -88,7 +88,7 @@ export class AuthClient {
 
     const response = await this.http.request<{ login: AuthResponse }>(
       query,
-      input
+      { input }
     );
 
     // Store token in client
