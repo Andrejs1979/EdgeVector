@@ -254,6 +254,24 @@ export class QueryTranslator {
         }
         break;
 
+      case '$nin':
+        if (Array.isArray(value) && value.length > 0) {
+          const conditions = value.map(() => `json_extract(_data, ?) != ?`).join(' AND ');
+          sqlParts.where.push(`(${conditions})`);
+          for (const v of value) {
+            sqlParts.params.push(jsonPath, this.serializeValue(v));
+          }
+        }
+        break;
+
+      case '$regex':
+        // SQLite uses LIKE for pattern matching
+        sqlParts.where.push(`json_extract(_data, ?) LIKE ?`);
+        // Convert regex to SQL LIKE pattern (basic conversion)
+        const pattern = String(value).replace(/\.\*/g, '%').replace(/\./g, '_');
+        sqlParts.params.push(jsonPath, pattern);
+        break;
+
       case '$exists':
         if (value) {
           sqlParts.where.push(`json_extract(_data, ?) IS NOT NULL`);
