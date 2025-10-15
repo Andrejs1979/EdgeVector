@@ -1,5 +1,20 @@
 # EdgeVector DB
 
+> **⚠️ ARCHIVED - This repository is now archived and no longer maintained.**
+>
+> **This MVP implementation has been superseded by the production version at:**
+> **https://github.com/FinHub-vc/NoSQL**
+>
+> The NoSQL repository contains the complete, production-ready EdgeVector platform with 13x more features and active maintenance.
+>
+> **For production use, please use the NoSQL repository.**
+>
+> See [ARCHIVE.md](./ARCHIVE.md) for full details on the consolidation.
+
+---
+
+## Original README (For Historical Reference)
+
 Edge-native database platform built on Cloudflare infrastructure, combining schema-free document storage, vector search, time series data management, and real-time streaming capabilities.
 
 ## Features
