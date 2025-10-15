@@ -12,10 +12,44 @@ import type { User } from '../auth/jwt';
 import { generateToken, hashPassword, verifyPassword } from '../auth/jwt';
 import { requireAuth } from '../auth/middleware';
 
+// Vector operations
+import { VectorStore } from '../storage/VectorStore';
+import { VectorSearch } from '../vector/VectorSearch';
+import { EmbeddingGenerator, type EmbeddingModel } from '../ai/embeddings';
+import type { SimilarityMetric } from '../vector/similarity';
+
 export interface Context {
   env: Env;
   user?: User;
   authenticated: boolean;
+}
+
+// Helper function to convert GraphQL SimilarityMetric enum to TypeScript type
+function toSimilarityMetric(metric?: string): SimilarityMetric {
+  switch (metric) {
+    case 'COSINE':
+      return 'cosine';
+    case 'EUCLIDEAN':
+      return 'euclidean';
+    case 'DOT':
+      return 'dot';
+    default:
+      return 'cosine'; // Default
+  }
+}
+
+// Helper function to convert GraphQL EmbeddingModel enum to TypeScript type
+function toEmbeddingModel(model?: string): EmbeddingModel {
+  switch (model) {
+    case 'BGE_SMALL':
+      return '@cf/baai/bge-small-en-v1.5';
+    case 'BGE_BASE':
+      return '@cf/baai/bge-base-en-v1.5';
+    case 'BGE_LARGE':
+      return '@cf/baai/bge-large-en-v1.5';
+    default:
+      return '@cf/baai/bge-base-en-v1.5'; // Default
+  }
 }
 
 export const resolvers = {
@@ -163,6 +197,137 @@ export const resolvers = {
       await store.initialize();
 
       return store.getSchemaStats();
+    },
+
+    // Vector search operations
+    vectorSearch: async (
+      _parent: unknown,
+      args: { vector: number[]; options?: any },
+      context: Context
+    ) => {
+      const embeddingGenerator = new EmbeddingGenerator(context.env.AI, context.env.CACHE);
+      const vectorSearch = new VectorSearch(context.env.DB, embeddingGenerator);
+
+      const options = args.options || {};
+      const searchOptions = {
+        limit: options.limit,
+        metric: toSimilarityMetric(options.metric),
+        collection: options.collection,
+        modelName: options.modelName,
+        threshold: options.threshold,
+        includeSelf: options.includeSelf,
+        metadataFilter: options.metadataFilter,
+      };
+
+      const result = await vectorSearch.search(args.vector, searchOptions);
+
+      return {
+        results: result.results.map((r) => ({
+          vector: {
+            id: r.vector.id,
+            documentId: r.vector.documentId,
+            collection: r.vector.collection,
+            dimensions: r.vector.dimensions,
+            model: r.vector.modelName,
+            normalized: r.vector.normalized,
+            metadata: r.vector.metadata,
+            createdAt: r.vector.createdAt,
+            updatedAt: r.vector.updatedAt,
+          },
+          score: r.score,
+          distance: r.distance,
+        })),
+        stats: result.stats,
+      };
+    },
+
+    vectorSearchByText: async (
+      _parent: unknown,
+      args: { text: string; embeddingModel?: string; options?: any },
+      context: Context
+    ) => {
+      const embeddingGenerator = new EmbeddingGenerator(context.env.AI, context.env.CACHE);
+      const vectorSearch = new VectorSearch(context.env.DB, embeddingGenerator);
+
+      const options = args.options || {};
+      const searchOptions = {
+        limit: options.limit,
+        metric: toSimilarityMetric(options.metric),
+        collection: options.collection,
+        modelName: options.modelName,
+        threshold: options.threshold,
+        includeSelf: options.includeSelf,
+        metadataFilter: options.metadataFilter,
+        embeddingModel: toEmbeddingModel(args.embeddingModel),
+      };
+
+      const result = await vectorSearch.searchByText(args.text, searchOptions);
+
+      return {
+        results: result.results.map((r) => ({
+          vector: {
+            id: r.vector.id,
+            documentId: r.vector.documentId,
+            collection: r.vector.collection,
+            dimensions: r.vector.dimensions,
+            model: r.vector.modelName,
+            normalized: r.vector.normalized,
+            metadata: r.vector.metadata,
+            createdAt: r.vector.createdAt,
+            updatedAt: r.vector.updatedAt,
+          },
+          score: r.score,
+          distance: r.distance,
+        })),
+        stats: result.stats,
+      };
+    },
+
+    getVector: async (
+      _parent: unknown,
+      args: { documentId: string },
+      context: Context
+    ) => {
+      const vectorStore = new VectorStore(context.env.DB);
+      const vector = await vectorStore.find(args.documentId);
+
+      if (!vector) {
+        return null;
+      }
+
+      return {
+        id: vector.id,
+        documentId: vector.documentId,
+        collection: vector.collection,
+        dimensions: vector.dimensions,
+        model: vector.modelName,
+        normalized: vector.normalized,
+        metadata: vector.metadata,
+        createdAt: vector.createdAt,
+        updatedAt: vector.updatedAt,
+      };
+    },
+
+    vectorCollectionStats: async (
+      _parent: unknown,
+      args: { collection: string },
+      context: Context
+    ) => {
+      const embeddingGenerator = new EmbeddingGenerator(context.env.AI, context.env.CACHE);
+      const vectorSearch = new VectorSearch(context.env.DB, embeddingGenerator);
+
+      return vectorSearch.getCollectionStats(args.collection);
+    },
+
+    compareSimilarity: async (
+      _parent: unknown,
+      args: { textA: string; textB: string; embeddingModel?: string },
+      context: Context
+    ) => {
+      const embeddingGenerator = new EmbeddingGenerator(context.env.AI, context.env.CACHE);
+      const model = toEmbeddingModel(args.embeddingModel);
+
+      return embeddingGenerator.compareSimilarity(args.textA, args.textB, { model });
     },
   },
 
@@ -411,6 +576,117 @@ export const resolvers = {
         .run();
 
       return true;
+    },
+
+    // Vector mutation operations
+    generateEmbedding: async (
+      _parent: unknown,
+      args: { text: string; embeddingModel?: string; normalize?: boolean },
+      context: Context
+    ) => {
+      const embeddingGenerator = new EmbeddingGenerator(context.env.AI, context.env.CACHE);
+      const model = toEmbeddingModel(args.embeddingModel);
+
+      return embeddingGenerator.generateEmbeddingResult(args.text, {
+        model,
+        normalize: args.normalize !== false,
+        useCache: true,
+      });
+    },
+
+    generateEmbeddingBatch: async (
+      _parent: unknown,
+      args: { texts: string[]; embeddingModel?: string },
+      context: Context
+    ) => {
+      const embeddingGenerator = new EmbeddingGenerator(context.env.AI, context.env.CACHE);
+      const model = toEmbeddingModel(args.embeddingModel);
+
+      const results = [];
+      for (const text of args.texts) {
+        const result = await embeddingGenerator.generateEmbeddingResult(text, {
+          model,
+          normalize: true,
+          useCache: true,
+        });
+        results.push(result);
+      }
+
+      return results;
+    },
+
+    addVectorToDocument: async (
+      _parent: unknown,
+      args: { input: any },
+      context: Context
+    ) => {
+      const vectorStore = new VectorStore(context.env.DB);
+      const { documentId, vector, modelName, metadata, normalized } = args.input;
+
+      const result = await vectorStore.insert({
+        documentId,
+        collection: '', // Will be extracted from document
+        vector,
+        modelName,
+        metadata,
+        normalized: normalized !== false,
+      });
+
+      return {
+        id: result.id,
+        documentId: result.documentId,
+        collection: result.collection,
+        dimensions: result.dimensions,
+        model: result.modelName,
+        normalized: result.normalized,
+        metadata: result.metadata,
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
+      };
+    },
+
+    updateVector: async (
+      _parent: unknown,
+      args: { documentId: string; vector: number[]; modelName?: string; metadata?: any },
+      context: Context
+    ) => {
+      const vectorStore = new VectorStore(context.env.DB);
+
+      const result = await vectorStore.updateByDocumentId(args.documentId, {
+        vector: args.vector,
+        modelName: args.modelName,
+        metadata: args.metadata,
+      });
+
+      return {
+        id: result.id,
+        documentId: result.documentId,
+        collection: result.collection,
+        dimensions: result.dimensions,
+        model: result.modelName,
+        normalized: result.normalized,
+        metadata: result.metadata,
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
+      };
+    },
+
+    deleteVector: async (
+      _parent: unknown,
+      args: { documentId: string },
+      context: Context
+    ) => {
+      const vectorStore = new VectorStore(context.env.DB);
+      return vectorStore.deleteByDocumentId(args.documentId);
+    },
+
+    deleteVectorCollection: async (
+      _parent: unknown,
+      args: { collection: string },
+      context: Context
+    ) => {
+      const vectorStore = new VectorStore(context.env.DB);
+      return vectorStore.deleteCollection(args.collection);
     },
   },
 
