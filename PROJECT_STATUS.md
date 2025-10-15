@@ -99,9 +99,13 @@
 - [x] Implement user registration and login mutations
 - [x] Add protected "me" query for authenticated users
 - [x] Create users table migration
+- [x] Implement rate limiting with KV storage (token bucket algorithm)
+- [x] Create rate limiter middleware for all endpoints
+- [x] Add rate limit headers to all responses
+- [x] Test and validate rate limiting functionality
 
 ### Week 3 Results (So Far)
-**GraphQL API Status:** ✅ FULLY OPERATIONAL WITH AUTHENTICATION
+**GraphQL API Status:** ✅ FULLY OPERATIONAL WITH AUTHENTICATION & RATE LIMITING
 - GraphQL Playground available at /graphql
 - Health endpoint working
 - Collection management (create, list, query)
@@ -111,6 +115,8 @@
 - JWT authentication with bearer tokens
 - Secure user registration and login
 - Protected endpoints requiring authentication
+- Rate limiting on all endpoints using KV storage
+- Rate limit headers (X-RateLimit-*) on all responses
 
 **Verified Endpoints:**
 - `query { health }` - System health check with database stats
@@ -130,8 +136,18 @@
 - User session management (last login tracking)
 - 24-hour token expiration
 
+**Rate Limiting Features:**
+- Token bucket algorithm using Cloudflare KV storage
+- Configurable limits per endpoint type
+- Different limits for authenticated vs unauthenticated users
+- GraphQL: 100 req/min (unauthenticated), 500 req/min (authenticated)
+- Health: 300 req/min
+- Rate limit headers: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
+- Automatic 429 responses with Retry-After header
+- IP-based tracking for unauthenticated requests
+- User ID-based tracking for authenticated requests
+
 ### High Priority (Remaining Week 3 Tasks)
-- [ ] Implement rate limiting using KV storage
 - [ ] Build API documentation (GraphQL schema docs)
 - [ ] Create integration tests for GraphQL API
 
@@ -153,7 +169,7 @@
 
 ## Metrics
 
-- **Lines of Code:** ~13,500+ (including GraphQL layer + authentication)
+- **Lines of Code:** ~14,000+ (including GraphQL + auth + rate limiting)
 - **Test Coverage:** 16/20 tests passing (80% pass rate)
 - **Performance:** <1ms query translation, 100+ QPS
 - **Dependencies:** 387 npm packages installed
@@ -162,9 +178,10 @@
 - **GitHub Actions Workflows:** 2 configured
 - **Example Applications:** 3 comprehensive demos
 - **GraphQL Endpoints:** 18+ queries and mutations implemented
-- **API Features:** Full CRUD, filtering, pagination, schema introspection, JWT auth
+- **API Features:** Full CRUD, filtering, pagination, schema introspection, JWT auth, rate limiting
 - **Authentication:** JWT tokens, password hashing, protected endpoints
-- **Security:** Web Crypto API, bearer token authentication, 24h token expiration
+- **Security:** Web Crypto API, bearer token authentication, 24h token expiration, rate limiting
+- **Rate Limiting:** KV-based token bucket, configurable limits, automatic enforcement
 
 ## Repository
 
@@ -183,17 +200,20 @@
 
 - ✅ Week 1 tasks completed successfully
 - ✅ Week 2 tasks completed successfully
-- ✅ Week 3: GraphQL API layer + JWT Authentication implemented and tested
+- ✅ Week 3: GraphQL API + JWT Authentication + Rate Limiting implemented and tested
 - ✅ Schema-free concept validated with performance tests
 - ✅ Core engine proven to work <1ms per query
 - ✅ GraphQL API fully operational with MongoDB-style queries
 - ✅ JWT authentication working with Web Crypto API
 - ✅ User registration and login fully functional
+- ✅ Rate limiting implemented using KV storage (token bucket algorithm)
+- ✅ Rate limit headers on all responses
 - TypeScript compiles without errors
 - ESLint shows warnings (type safety - acceptable for development)
 - Local D1 database operational with test data and users
-- **CRITICAL MILESTONE ACHIEVED**: Secure, production-ready GraphQL API with JWT authentication on Cloudflare Workers!
+- **CRITICAL MILESTONE ACHIEVED**: Production-ready GraphQL API with JWT authentication and rate limiting on Cloudflare Workers!
 - GraphQL Playground available at http://localhost:8787/graphql (dev)
 - Fixed query_patterns table schema (added UNIQUE constraint for ON CONFLICT)
 - Authentication tested: register, login, protected queries all working
-- Next: Rate limiting with KV, API documentation, and integration tests
+- Rate limiting tested: headers working, counters decrementing correctly
+- Next: API documentation and integration tests

@@ -5,6 +5,13 @@
 
 import { Env } from './types/env';
 import { createGraphQLServer } from './graphql/server';
+import {
+  RateLimiter,
+  RATE_LIMITS,
+  getRateLimitIdentifier,
+  addRateLimitHeaders,
+  createRateLimitResponse,
+} from './middleware/rateLimiter';
 
 // Export Durable Objects
 export { ShardManager } from './durable-objects/ShardManager';
@@ -17,7 +24,16 @@ export default {
 
     // Health check endpoint (simple, non-GraphQL)
     if (url.pathname === '/health') {
-      return new Response(JSON.stringify({
+      // Apply rate limiting
+      const rateLimiter = new RateLimiter(env.CACHE, RATE_LIMITS.health);
+      const identifier = getRateLimitIdentifier(request);
+      const rateLimit = await rateLimiter.checkLimit(identifier);
+
+      if (!rateLimit.allowed) {
+        return createRateLimitResponse(rateLimit);
+      }
+
+      const response = new Response(JSON.stringify({
         status: 'ok',
         service: 'edgevector-db',
         version: '0.1.0',
@@ -26,12 +42,36 @@ export default {
       }), {
         headers: { 'Content-Type': 'application/json' },
       });
+
+      // Add rate limit headers
+      addRateLimitHeaders(response.headers, rateLimit);
+      return response;
     }
 
     // GraphQL endpoint
     if (url.pathname.startsWith('/graphql')) {
+      // Apply rate limiting before GraphQL
+      const rateLimiter = new RateLimiter(env.CACHE, RATE_LIMITS.graphql);
+      const identifier = getRateLimitIdentifier(request);
+      const rateLimit = await rateLimiter.checkLimit(identifier, false);
+
+      if (!rateLimit.allowed) {
+        return createRateLimitResponse(rateLimit);
+      }
+
+      // Execute GraphQL request
       const yoga = createGraphQLServer(env);
-      return yoga.fetch(request, env, ctx);
+      const response = await yoga.fetch(request, env, ctx);
+
+      // Add rate limit headers to response
+      const newHeaders = new Headers(response.headers);
+      addRateLimitHeaders(newHeaders, rateLimit);
+
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders,
+      });
     }
 
     // Root endpoint - API information

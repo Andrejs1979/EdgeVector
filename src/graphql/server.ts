@@ -38,11 +38,10 @@ export function createGraphQLServer(env: Env) {
       };
     },
     plugins: [
-      // Add custom plugins here
+      // Logging plugin
       {
         onExecute: () => ({
           onExecuteDone: ({ result, setResult }) => {
-            // Add custom headers or logging
             console.log('GraphQL execution complete');
           },
         }),
