@@ -1,0 +1,44 @@
+{
+  "name": "edgevector-db",
+  "version": "0.1.0",
+  "description": "Edge-native database platform with schema-free documents, vectors, and real-time capabilities",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "typecheck": "tsc --noEmit",
+    "db:create": "wrangler d1 create edgevector-db",
+    "db:migrations:apply": "wrangler d1 migrations apply edgevector-db",
+    "db:migrations:list": "wrangler d1 migrations list edgevector-db"
+  },
+  "keywords": [
+    "database",
+    "edge",
+    "cloudflare",
+    "vector-search",
+    "nosql",
+    "graphql",
+    "real-time"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.0.0",
+    "wrangler": "^3.96.0"
+  },
+  "dependencies": {
+    "graphql": "^16.9.0",
+    "graphql-yoga": "^5.10.6"
+  }
+}
