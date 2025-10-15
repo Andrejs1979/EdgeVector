@@ -23,6 +23,7 @@ export interface Env {
 
   // Environment variables
   ENVIRONMENT: string;
+  JWT_SECRET?: string;
 }
 
 export interface D1Result<T = unknown> {

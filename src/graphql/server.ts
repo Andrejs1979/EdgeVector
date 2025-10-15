@@ -9,6 +9,7 @@ import { createSchema } from 'graphql-yoga';
 import { typeDefs } from './schema';
 import { resolvers, type Context } from './resolvers';
 import type { Env } from '../types/env';
+import { authenticateRequest } from '../auth/middleware';
 
 export function createGraphQLServer(env: Env) {
   const schema = createSchema({
@@ -27,25 +28,13 @@ export function createGraphQLServer(env: Env) {
     },
     context: async ({ request }): Promise<Context> => {
       // Use env from closure (passed to createGraphQLServer)
-      // Extract auth token from headers
-      const authHeader = request.headers.get('Authorization');
-      let user;
-
-      if (authHeader?.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        // TODO: Verify token and extract user info
-        // For now, basic validation
-        if (token) {
-          user = {
-            id: 'user-123', // TODO: Extract from verified token
-            email: 'user@example.com',
-          };
-        }
-      }
+      // Authenticate request using JWT middleware
+      const authResult = await authenticateRequest(request, env);
 
       return {
         env,
-        user,
+        user: authResult.user || undefined,
+        authenticated: authResult.authenticated,
       };
     },
     plugins: [

@@ -122,6 +122,9 @@ export const typeDefs = `#graphql
     # Health check
     health: HealthStatus!
 
+    # Current user (requires authentication)
+    me: UserProfile
+
     # List collections
     collections: [Collection!]!
 
@@ -151,8 +154,36 @@ export const typeDefs = `#graphql
     schemaStats(collection: String!): SchemaStats!
   }
 
+  # Authentication types
+  type AuthPayload {
+    token: String!
+    user: UserProfile!
+  }
+
+  type UserProfile {
+    id: ID!
+    email: String!
+    name: String
+    createdAt: DateTime!
+  }
+
+  input RegisterInput {
+    email: String!
+    password: String!
+    name: String
+  }
+
+  input LoginInput {
+    email: String!
+    password: String!
+  }
+
   # Mutation type
   type Mutation {
+    # Authentication mutations
+    register(input: RegisterInput!): AuthPayload!
+    login(input: LoginInput!): AuthPayload!
+
     # Insert one document
     insertOne(
       collection: String!
