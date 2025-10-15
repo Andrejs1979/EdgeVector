@@ -80,7 +80,7 @@ export class QueryPatternAnalyzer implements DurableObject {
   }
 
   private async handleTrackQuery(request: Request): Promise<Response> {
-    const body = await request.json();
+    const body = await request.json() as any;
 
     // Track each field used in the query
     for (const field of body.fields) {
@@ -117,7 +117,7 @@ export class QueryPatternAnalyzer implements DurableObject {
   }
 
   private async handleAnalyze(request: Request): Promise<Response> {
-    const body = await request.json();
+    const body = await request.json() as any;
 
     const key = this.getPatternKey(body.collection, body.fieldPath);
     const pattern = this.patterns.get(key);

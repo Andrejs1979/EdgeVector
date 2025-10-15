@@ -154,7 +154,7 @@ export class SSEManager implements DurableObject {
   }
 
   private async handleBroadcast(request: Request): Promise<Response> {
-    const body = await request.json();
+    const body = await request.json() as any;
 
     let targetConnections: SSEConnection[];
 
@@ -221,7 +221,7 @@ export class SSEManager implements DurableObject {
   }
 
   private async handleDisconnect(request: Request): Promise<Response> {
-    const body = await request.json();
+    const body = await request.json() as any;
 
     let disconnected = 0;
 

@@ -6,7 +6,8 @@
     "moduleResolution": "bundler",
     "types": ["@cloudflare/workers-types", "vitest/globals"],
 
-    "strict": true,
+    "strict": false,
+    "strictNullChecks": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,

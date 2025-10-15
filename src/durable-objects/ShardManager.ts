@@ -82,7 +82,7 @@ export class ShardManager implements DurableObject {
   }
 
   private async handleCreateShard(request: Request): Promise<Response> {
-    const body = await request.json();
+    const body = await request.json() as any;
 
     const shardId = body.shardId || this.generateShardId();
     const shard: ShardInfo = {
@@ -108,7 +108,7 @@ export class ShardManager implements DurableObject {
   }
 
   private async handleGetRoute(request: Request): Promise<Response> {
-    const body = await request.json();
+    const body = await request.json() as any;
 
     const route = this.getShardForKey(body.key, body.type);
 
