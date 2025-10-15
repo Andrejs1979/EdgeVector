@@ -117,10 +117,12 @@ Cold Tier (R2) → Archival data, highly compressed
 
 ## Documentation
 
-- [Architecture Guide](./docs/architecture.md) (coming soon)
-- [API Reference](./docs/api.md) (coming soon)
-- [Schema-Free Design](./docs/schema-free.md) (coming soon)
-- [Vector Search](./docs/vector-search.md) (coming soon)
+- **[Quick Start Guide](./docs/QUICK_START.md)** - Get started in 5 minutes
+- **[API Documentation](./docs/API.md)** - Complete GraphQL API reference
+- **[Authentication Guide](./docs/AUTHENTICATION.md)** - JWT auth flows and security
+- [Architecture Guide](./CLAUDE.md) - System architecture and design decisions
+- [Setup Instructions](./SETUP.md) - Detailed setup and configuration
+- [Project Status](./PROJECT_STATUS.md) - Current progress and metrics
 
 ## License
 
