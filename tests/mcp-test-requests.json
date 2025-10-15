@@ -1,0 +1,81 @@
+{
+  "initialize": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "1.0",
+      "clientInfo": {
+        "name": "Test Client",
+        "version": "1.0.0"
+      },
+      "capabilities": {
+        "tools": true
+      }
+    }
+  },
+  "list_tools": {
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "list_tools",
+    "params": {}
+  },
+  "ping": {
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "ping",
+    "params": {}
+  },
+  "search_documents": {
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "call_tool",
+    "params": {
+      "name": "search_documents",
+      "arguments": {
+        "collection": "test_collection",
+        "filter": {},
+        "limit": 10
+      }
+    }
+  },
+  "vector_search": {
+    "jsonrpc": "2.0",
+    "id": 5,
+    "method": "call_tool",
+    "params": {
+      "name": "vector_search",
+      "arguments": {
+        "query": "machine learning algorithms",
+        "limit": 5
+      }
+    }
+  },
+  "store_memory": {
+    "jsonrpc": "2.0",
+    "id": 6,
+    "method": "call_tool",
+    "params": {
+      "name": "store_memory",
+      "arguments": {
+        "memory": "The user prefers concise technical explanations with code examples",
+        "metadata": {
+          "category": "user_preference",
+          "importance": "high"
+        }
+      }
+    }
+  },
+  "retrieve_memory": {
+    "jsonrpc": "2.0",
+    "id": 7,
+    "method": "call_tool",
+    "params": {
+      "name": "retrieve_memory",
+      "arguments": {
+        "query": "How does the user like explanations?",
+        "limit": 3
+      }
+    }
+  }
+}
