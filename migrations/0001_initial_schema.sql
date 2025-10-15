@@ -91,7 +91,8 @@ CREATE TABLE IF NOT EXISTS query_patterns (
     query_count INTEGER DEFAULT 0,
     last_queried TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     avg_result_count REAL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(collection, field_path)
 );
 
 CREATE INDEX idx_patterns_collection ON query_patterns(collection);
