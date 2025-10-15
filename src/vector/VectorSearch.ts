@@ -14,6 +14,7 @@ import {
   topKSimilar,
 } from './similarity';
 import { validateDimensions } from './utils';
+import { EmbeddingGenerator, EmbeddingModel } from '../ai/embeddings';
 
 export interface VectorSearchOptions {
   /**
@@ -79,7 +80,10 @@ export interface VectorSearchStats {
 export class VectorSearch {
   private vectorStore: VectorStore;
 
-  constructor(private db: D1Database) {
+  constructor(
+    private db: D1Database,
+    private embeddingGenerator?: EmbeddingGenerator
+  ) {
     this.vectorStore = new VectorStore(db);
   }
 
@@ -174,18 +178,30 @@ export class VectorSearch {
 
   /**
    * Search using text by generating embeddings (requires Workers AI)
-   * This will be implemented in the embeddings module
    */
   async searchByText(
     text: string,
-    options: VectorSearchOptions = {}
+    options: VectorSearchOptions & { embeddingModel?: EmbeddingModel } = {}
   ): Promise<{
     results: VectorSearchResult[];
     stats: VectorSearchStats;
   }> {
-    throw new Error(
-      'searchByText requires Workers AI integration - implement in embeddings module'
-    );
+    if (!this.embeddingGenerator) {
+      throw new Error(
+        'EmbeddingGenerator not provided to VectorSearch constructor'
+      );
+    }
+
+    // Generate embedding for the query text
+    const { embeddingModel, ...searchOptions } = options;
+    const queryVector = await this.embeddingGenerator.generateEmbedding(text, {
+      model: embeddingModel,
+      normalize: true,
+      useCache: true,
+    });
+
+    // Perform vector search
+    return this.search(queryVector, searchOptions);
   }
 
   /**
