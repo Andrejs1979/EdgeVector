@@ -7,11 +7,23 @@
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { VectorSearch } from '../../src/vector/VectorSearch';
-import { normalizeVector } from '../../src/vector/utils';
+import { normalize } from '../../src/vector/utils';
+
+// Alias for consistency with test expectations
+const normalizeVector = normalize;
 
 // Mock dependencies
 const mockDB = {
-  prepare: vi.fn(),
+  prepare: vi.fn().mockReturnValue({
+    bind: vi.fn().mockReturnValue({
+      all: vi.fn().mockResolvedValue({ results: [] }),
+      first: vi.fn().mockResolvedValue(null),
+      run: vi.fn().mockResolvedValue({ meta: { changes: 0 } }),
+    }),
+    all: vi.fn().mockResolvedValue({ results: [] }),
+    first: vi.fn().mockResolvedValue(null),
+    run: vi.fn().mockResolvedValue({ meta: { changes: 0 } }),
+  }),
   batch: vi.fn(),
   exec: vi.fn(),
 } as any;
@@ -30,7 +42,7 @@ describe('VectorSearch', () => {
     vectorSearch = new VectorSearch(mockDB, mockEmbeddingGenerator);
   });
 
-  describe('searchByVector', () => {
+  describe('search', () => {
     test('should find most similar vectors', async () => {
       const queryVector = normalizeVector([1, 0, 0]);
 
@@ -38,41 +50,47 @@ describe('VectorSearch', () => {
       const mockVectors = [
         {
           id: '1',
-          documentId: 'doc1',
+          document_id: 'doc1',
           collection: 'test',
-          vector: new Uint8Array(normalizeVector([0.9, 0.1, 0]).map((v) => (v + 1) * 127.5)),
+          vector: new Float32Array(normalizeVector([0.9, 0.1, 0])).buffer,
           dimensions: 3,
           modelName: 'test-model',
-          normalized: true,
-          metadata: { title: 'Similar' },
-          createdAt: new Date().toISOString(),
+          normalized: 1,
+          model_name: 'test-model',
+          metadata: JSON.stringify({ title: 'Similar' }),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         },
         {
           id: '2',
-          documentId: 'doc2',
+          document_id: 'doc2',
           collection: 'test',
-          vector: new Uint8Array(normalizeVector([0.1, 0.9, 0]).map((v) => (v + 1) * 127.5)),
+          vector: new Float32Array(normalizeVector([0.1, 0.9, 0])).buffer,
           dimensions: 3,
           modelName: 'test-model',
-          normalized: true,
-          metadata: { title: 'Different' },
-          createdAt: new Date().toISOString(),
+          normalized: 1,
+          model_name: 'test-model',
+          metadata: JSON.stringify({ title: 'Different' }),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         },
       ];
 
-      mockDB.prepare.mockReturnValue({
-        all: vi.fn().mockResolvedValue({ results: mockVectors }),
+      mockDB.prepare.mockReturnValueOnce({
+        bind: vi.fn().mockReturnValue({
+          all: vi.fn().mockResolvedValue({ results: mockVectors }),
+        }),
       });
 
-      const result = await vectorSearch.searchByVector(queryVector, {
+      const result = await vectorSearch.search(queryVector, {
         limit: 2,
         metric: 'cosine',
       });
 
       expect(result.results).toHaveLength(2);
       expect(result.results[0].score).toBeGreaterThan(result.results[1].score);
-      expect(result.results[0].vector.metadata.title).toBe('Similar');
-      expect(result.stats.totalVectors).toBe(2);
+      expect(result.results[0].vector.metadata!.title).toBe('Similar');
+      expect(result.stats.vectorsScanned).toBe(2);
     });
 
     test('should respect limit parameter', async () => {
@@ -82,7 +100,7 @@ describe('VectorSearch', () => {
         all: vi.fn().mockResolvedValue({ results: [] }),
       });
 
-      await vectorSearch.searchByVector(queryVector, { limit: 5 });
+      await vectorSearch.search(queryVector, { limit: 5 });
 
       expect(mockDB.prepare).toHaveBeenCalled();
       // Verify SQL contains LIMIT clause
@@ -95,7 +113,7 @@ describe('VectorSearch', () => {
         all: vi.fn().mockResolvedValue({ results: [] }),
       });
 
-      await vectorSearch.searchByVector(queryVector, {
+      await vectorSearch.search(queryVector, {
         collection: 'test_collection',
       });
 
@@ -110,7 +128,7 @@ describe('VectorSearch', () => {
         all: vi.fn().mockResolvedValue({ results: [] }),
       });
 
-      await vectorSearch.searchByVector(queryVector, {
+      await vectorSearch.search(queryVector, {
         modelName: 'bge-base-en-v1.5',
       });
 
@@ -149,7 +167,7 @@ describe('VectorSearch', () => {
         all: vi.fn().mockResolvedValue({ results: mockVectors }),
       });
 
-      const result = await vectorSearch.searchByVector(queryVector, {
+      const result = await vectorSearch.search(queryVector, {
         threshold: 0.9,
         metric: 'cosine',
       });
@@ -183,7 +201,7 @@ describe('VectorSearch', () => {
       });
 
       await expect(
-        vectorSearch.searchByVector(invalidVector, {})
+        vectorSearch.search(invalidVector, {})
       ).rejects.toThrow();
     });
 
@@ -194,10 +212,10 @@ describe('VectorSearch', () => {
         all: vi.fn().mockResolvedValue({ results: [] }),
       });
 
-      const result = await vectorSearch.searchByVector(queryVector, {});
+      const result = await vectorSearch.search(queryVector, {});
 
       expect(result.results).toEqual([]);
-      expect(result.stats.totalVectors).toBe(0);
+      expect(result.stats.vectorsScanned).toBe(0);
     });
 
     test('should track search statistics', async () => {
@@ -207,11 +225,11 @@ describe('VectorSearch', () => {
         all: vi.fn().mockResolvedValue({ results: [] }),
       });
 
-      const result = await vectorSearch.searchByVector(queryVector, {});
+      const result = await vectorSearch.search(queryVector, {});
 
       expect(result.stats).toBeDefined();
-      expect(result.stats.searchTimeMs).toBeGreaterThanOrEqual(0);
-      expect(result.stats.totalVectors).toBeGreaterThanOrEqual(0);
+      expect(result.stats.queryTime).toBeGreaterThanOrEqual(0);
+      expect(result.stats.vectorsScanned).toBeGreaterThanOrEqual(0);
     });
   });
 
@@ -272,7 +290,7 @@ describe('VectorSearch', () => {
         all: vi.fn().mockResolvedValue({ results: [] }),
       });
 
-      await vectorSearch.searchByVector(queryVector, {
+      await vectorSearch.search(queryVector, {
         metric: 'cosine',
       });
 
@@ -286,7 +304,7 @@ describe('VectorSearch', () => {
         all: vi.fn().mockResolvedValue({ results: [] }),
       });
 
-      await vectorSearch.searchByVector(queryVector, {
+      await vectorSearch.search(queryVector, {
         metric: 'euclidean',
       });
 
@@ -300,7 +318,7 @@ describe('VectorSearch', () => {
         all: vi.fn().mockResolvedValue({ results: [] }),
       });
 
-      await vectorSearch.searchByVector(queryVector, {
+      await vectorSearch.search(queryVector, {
         metric: 'dot',
       });
 
@@ -314,7 +332,7 @@ describe('VectorSearch', () => {
         all: vi.fn().mockResolvedValue({ results: [] }),
       });
 
-      await vectorSearch.searchByVector(queryVector, {
+      await vectorSearch.search(queryVector, {
         metric: 'manhattan',
       });
 
@@ -328,7 +346,7 @@ describe('VectorSearch', () => {
         all: vi.fn().mockResolvedValue({ results: [] }),
       });
 
-      await vectorSearch.searchByVector(queryVector, {});
+      await vectorSearch.search(queryVector, {});
 
       expect(mockDB.prepare).toHaveBeenCalled();
     });
@@ -356,7 +374,7 @@ describe('VectorSearch', () => {
       });
 
       const startTime = Date.now();
-      const result = await vectorSearch.searchByVector(queryVector, {
+      const result = await vectorSearch.search(queryVector, {
         limit: 10,
       });
       const endTime = Date.now();
@@ -372,10 +390,10 @@ describe('VectorSearch', () => {
         all: vi.fn().mockResolvedValue({ results: [] }),
       });
 
-      const result = await vectorSearch.searchByVector(queryVector, {});
+      const result = await vectorSearch.search(queryVector, {});
 
-      expect(result.stats.searchTimeMs).toBeGreaterThanOrEqual(0);
-      expect(result.stats.searchTimeMs).toBeLessThan(10000); // Sanity check
+      expect(result.stats.queryTime).toBeGreaterThanOrEqual(0);
+      expect(result.stats.queryTime).toBeLessThan(10000); // Sanity check
     });
   });
 
@@ -387,8 +405,8 @@ describe('VectorSearch', () => {
         all: vi.fn().mockResolvedValue({ results: [] }),
       });
 
-      await vectorSearch.searchByVector(queryVector, {
-        metadata: { category: 'tech' },
+      await vectorSearch.search(queryVector, {
+        metadataFilter: { category: 'tech' },
       });
 
       expect(mockDB.prepare).toHaveBeenCalled();
@@ -401,7 +419,7 @@ describe('VectorSearch', () => {
         all: vi.fn().mockResolvedValue({ results: [] }),
       });
 
-      const result = await vectorSearch.searchByVector(queryVector, {
+      const result = await vectorSearch.search(queryVector, {
         limit: 0,
       });
 
@@ -416,7 +434,7 @@ describe('VectorSearch', () => {
       });
 
       await expect(
-        vectorSearch.searchByVector(queryVector, {
+        vectorSearch.search(queryVector, {
           threshold: -1,
         })
       ).rejects.toThrow();
@@ -430,7 +448,7 @@ describe('VectorSearch', () => {
       });
 
       await expect(
-        vectorSearch.searchByVector(queryVector, {
+        vectorSearch.search(queryVector, {
           metric: 'invalid' as any,
         })
       ).rejects.toThrow();
@@ -459,7 +477,7 @@ describe('VectorSearch', () => {
         all: vi.fn().mockResolvedValue({ results: mockVectors }),
       });
 
-      const result = await vectorSearch.searchByVector(queryVector, {});
+      const result = await vectorSearch.search(queryVector, {});
 
       expect(result).toHaveProperty('results');
       expect(result).toHaveProperty('stats');
@@ -495,7 +513,7 @@ describe('VectorSearch', () => {
         all: vi.fn().mockResolvedValue({ results: mockVectors }),
       });
 
-      const result = await vectorSearch.searchByVector(queryVector, {});
+      const result = await vectorSearch.search(queryVector, {});
 
       expect(result.results[0].vector.collection).toBe('articles');
       expect(result.results[0].vector.modelName).toBe('bge-base-en-v1.5');

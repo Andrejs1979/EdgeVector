@@ -8,11 +8,14 @@ import { describe, test, expect } from 'vitest';
 import {
   cosineSimilarity,
   euclideanDistance,
-  dotProductSimilarity,
+  dotProduct,
   manhattanDistance,
   squaredEuclideanDistance,
   cosineDistance,
 } from '../../src/vector/similarity';
+
+// Alias for consistency with test names
+const dotProductSimilarity = dotProduct;
 
 describe('Similarity Metrics', () => {
   describe('cosineSimilarity', () => {
